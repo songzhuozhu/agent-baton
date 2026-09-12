@@ -1,49 +1,162 @@
-# AgentBaton
+<p align="center">
+  <img src="build/icon.svg" width="96" height="96" alt="AgentBaton logo" />
+</p>
 
-> One baton. Every agent.
+<h1 align="center">AgentBaton</h1>
+<p align="center"><strong>One baton. Every agent.</strong></p>
+<p align="center">Organize your AI agent skills by context. Choose what each agent uses.</p>
 
-AgentBaton 是一款本地优先的跨平台桌面应用，用于汇总、分组、同步和安全部署多个 AI Agent 的 Skill。它的目标是让用户按工作开发、个人全栈、AI 剪辑等场景，只为每个 Agent 启用真正需要的 Skill。
+<p align="center">
+  <a href="https://github.com/songzhuozhu/agent-baton/actions/workflows/ci.yml"><img src="https://github.com/songzhuozhu/agent-baton/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license" /></a>
+  <img src="https://img.shields.io/badge/status-V1%20in%20development-orange" alt="V1 in development" />
+</p>
 
-V1 是 **多 Agent 的 Skill 控制面**，不是 Agent 编排或工作流平台。
+<p align="center">English · <a href="README.zh-CN.md">简体中文</a></p>
 
-## 支持范围
+AgentBaton is a local-first desktop skill manager for AI agents. Discover installed skills, organize them into reusable groups, and independently choose groups for each agent—with a preview before deployment.
 
-- 桌面应用：macOS、Windows、Linux
-- Agent：Codex、Claude Code、Cursor、TRAE、OpenCode
+**Development preview:** the local management core is implemented; V1 acceptance is not complete. GitHub authorization, conflict resolution, and cross-platform runtime validation still have gaps. Start from source; the desktop UI is currently in Simplified Chinese.
 
-五种 Agent 的集成能力并不假定在三种系统上完全一致。AgentBaton 按[官方适配矩阵](./docs/research/agent-adapter-compatibility-matrix.md)降级；例如 TRAE 在 Linux 上不提供集成写入。
+## Why AgentBaton?
 
-## 核心原则
+Your tools change with the work. An internal development skill, a frontend design skill, and a video-editing skill should not have to travel together.
 
-- 默认只发现，用户显式纳管后才创建规范副本。
-- 新纳管 Skill 默认 `Local Only`，不会自动上传。
-- Skill Group 是多对多的逻辑集合，可被多个 Agent 独立启用。
-- 所有写入先生成 Apply Plan、校验目标、创建备份，再由用户确认。
-- 不执行 Skill 内容，不静默覆盖上游、同步冲突或安装漂移。
-- 不自动重启 Agent；需要重启时明确显示状态。
+| Context | Example skill group | How you use it |
+| --- | --- | --- |
+| Work | Internal APIs, team conventions, project workflows | Select the Work group for your development agent. |
+| Personal projects | UI design, frontend polish, full-stack workflows | Switch to Personal, or combine it with shared skills. |
+| AI video editing | Editing workflows, captions, media utilities | Select Video for that session's agent. |
 
-完整需求见 [V1 需求文档](./docs/requirements-v1.md)，术语见 [领域模型](./CONTEXT.md)，架构见 [技术架构](./docs/architecture-v1.md)。
+A skill can belong to multiple groups without duplicating its managed content. Each agent keeps its own group selection and individual overrides. Change the selection, review the plan, apply it, and restart the agent when required.
 
-## 本地开发
+The goal is a relevant skill set for each task. Actual context and token costs depend on the agent's loading behavior; this project does not claim measured token savings.
+
+## Features
+
+- **Discover before adopting.** Inspect known user-level skill locations and explicitly added project/custom directories. Adoption creates a managed copy only after confirmation.
+- **Group once, reuse across agents.** Use many-to-many groups, independent selections, and per-skill overrides: follow groups, force on, or force off.
+- **Keep your own notes.** Search by name, description, or tags. Your notes stay separate from the original `SKILL.md`.
+- **Preview deployment.** Review changes, detect conflicting files or installation drift, and apply with per-agent backups and rollback support.
+- **Preserve upstream references.** Keep a Git source and baseline commit; preview updates in isolation and explicitly handle local forks.
+- **Choose what may sync.** Skills default to `Local Only`. Only `Sync Allowed` skills in participating groups are eligible for the sync snapshot.
+- **Recover from changes.** Restore deleted managed skills within a 30-day recovery window and undo recent applications when backups remain valid.
+
+The Git sync foundation includes snapshot export, restore, manual fetch/commit/push, and three-way conflict detection. The complete user-facing GitHub sync flow is still under development.
+
+## How it works
+
+1. **Discover** skills in supported locations. Scanning does not adopt or upload them.
+2. **Adopt** selected skills after reviewing their source and risk-bearing files.
+3. **Organize** skills into groups such as Work, Personal, and Video.
+4. **Select** groups for an agent and adjust any individual overrides.
+5. **Preview and apply** the proposed changes. Restart the agent yourself if needed.
+
+```text
+Installed skills → Discovery → Explicit adoption → Managed library
+                                                        │
+                                                  Skill groups
+                                                        │
+                                               Per-agent selection
+                                                        │
+                                            Preview → Confirm → Apply
+```
+
+The managed library is the source of truth. Agent installations, local SQLite state, and the portable Git sync repository are separate. Restoring a sync snapshot does not automatically install skills into agents.
+
+## Agent and platform support
+
+Five adapters are included, with different levels of readiness:
+
+| Agent | Current implementation and limits |
+| --- | --- |
+| Codex | User-level discovery and managed deployment path; real-version behavior still needs validation. |
+| Claude Code | User-level discovery and managed deployment path; native settings and name collisions require version-specific validation. |
+| Cursor | Discovery across known skill roots; externally installed skills cannot be assumed safely disableable. |
+| OpenCode | Discovery across known skill roots; evolving permission formats need real-version validation. |
+| TRAE | Read-only placeholder on macOS/Windows; no automatic discovery/deployment yet. Integration disabled on Linux. |
+
+The desktop targets **macOS, Windows, and Linux**. macOS ARM64 has local build/startup evidence. Windows/Linux ARM64 directory packages have been built, but target-platform runtime verification remains outstanding. The CI badge reports source checks, not agent integration or installer verification.
+
+See the [compatibility research](docs/research/agent-adapter-compatibility-matrix.md) and [acceptance audit](docs/verification/v1-gap-audit.md) for dated evidence and limitations.
+
+## Run from source
+
+Prerequisites: **Node.js 24**, npm, and Git. Electron requires a graphical desktop. Installing dependencies downloads platform-specific packages; native dependencies may require your OS's build tools.
 
 ```bash
+git clone https://github.com/songzhuozhu/agent-baton.git
+cd agent-baton
 npm ci
 npm run check
 npm run dev
 ```
 
-本机分发目录构建：
+`npm run check` runs type checking, automated tests, and a production build. It does not launch the desktop or modify real agent installations.
 
-- npm run package -- --mac dir
-- npm run package -- --win dir
-- npm run package -- --linux dir
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the desktop in development mode. |
+| `npm test` | Run the test suite. |
+| `npm run test:watch` | Rerun tests while developing. |
+| `npm run build` | Build the main process, preload, and renderer. |
+| `npm run preview` | Launch the current build. |
 
-Electron 预览需要下载对应平台的 Electron 运行时。仓库已配置三系统 CI 工作流用于测试、类型检查和构建，但本项目尚未取得远端 CI 执行证据；真实 Agent 行为仍须分别通过 Adapter fixture 与目标环境验证。
+To build an unpacked application directory, run the corresponding command on the target OS:
 
-`npm run check` 与 CI 使用同一验证入口，依次执行类型检查、测试和构建。开发约定及代码目录见 [贡献指南](./CONTRIBUTING.md)。
+```bash
+npm run package -- --mac dir
+npm run package -- --win dir
+npm run package -- --linux dir
+```
 
-## 当前状态
+Output goes to `dist/`. A successful directory build is not a signed installer or evidence of runtime compatibility.
 
-项目处于 V1 开发中。当前已经实现并测试了：显式纳管、分组和三态覆盖、安全 Apply Plan/回滚、上游隔离更新、Local Only 同步过滤、回收站/墓碑、手动 Git 工作树同步、新设备只恢复期望状态、诊断包和多 Agent Adapter 发现。
+### GitHub sync setup
 
-尚未达到可发布的 V1：GitHub App 正式 Device Flow、同步冲突决议界面、真实 Windows/Linux 运行证据及真实 Agent 验证仍在进行中。详细且可审计的状态见 [V1 中期验收审计](./docs/verification/v1-gap-audit.md)。
+The GitHub App Device Flow implementation reads `AGENT_BATON_GITHUB_APP_CLIENT_ID` from the application process environment. No production App client ID is bundled; without one, authorization reports that configuration is missing. Providing a client ID alone does not complete pending sync acceptance work.
+
+The [authorization notes](docs/research/github-device-flow.md) describe the implementation and remaining work. Git sync uses a dedicated repository for your selected skills—not this application's source repository.
+
+## Privacy and safety
+
+- Local-first, with no default telemetry or required AgentBaton account.
+- No full-disk scan; discovery stays within known or explicitly selected roots.
+- No execution of skill scripts during discovery, adoption, sync, or updates.
+- `Local Only` takes precedence over group sync settings; tags do not grant upload permission.
+- `Sync Allowed` means eligible for your selected repository, not safe for public disclosure.
+- Conflicts with protected installations or detected drift are blocked for review.
+- Diagnostic exports are user-initiated and exclude skill bodies, credentials, and absolute paths by default.
+
+Static risk indicators are not a security audit of third-party skills. Review the content and trust its source before allowing an agent to use it.
+
+## Current status
+
+The last local verification on **2026-09-12** passed **76 tests across 36 files**, type checking, and a production build.
+
+Work remaining before V1 acceptance:
+
+- [ ] Complete GitHub App authorization and real private-repository transport validation.
+- [ ] Connect conflict decisions to the sync transaction and UI.
+- [ ] Verify the two-device restore/sync workflow end to end.
+- [ ] Validate real agent versions and Windows/Linux desktop behavior.
+- [ ] Complete settings, installation details, and remaining deletion/uninstall flows.
+- [ ] Complete desktop visual and keyboard-accessibility checks.
+
+Progress is tracked in the [acceptance audit](docs/verification/v1-gap-audit.md). V1 focuses on skill management; agent orchestration, task routing, and third-party adapter plugins are outside its scope.
+
+## Contributing
+
+Bug reports, reproducible agent compatibility reports, UI improvements, and focused pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before making changes. Include the OS, agent version, expected behavior, and a minimal reproduction when [opening an issue](https://github.com/songzhuozhu/agent-baton/issues); remove private skill content and credentials first.
+
+Project references (currently in Chinese):
+
+- [V1 requirements](docs/requirements-v1.md) · [Domain vocabulary](CONTEXT.md)
+- [Architecture](docs/architecture-v1.md) · [Architecture decisions](docs/adr/)
+- [Sync format](docs/sync-format-v1.md) · [Development plan](docs/development-plan-v1.md)
+
+If AgentBaton fits a problem you have, a star helps other developers discover it. Concrete feedback helps shape the next release.
+
+## License
+
+[MIT](LICENSE) © 2026 songzhuozhu. Skills managed with AgentBaton retain their own licenses and permissions.

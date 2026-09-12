@@ -4,6 +4,15 @@
   "version": "0.1.0",
   "description": "One baton. Every agent.",
   "author": "AgentBaton Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/songzhuozhu/agent-baton.git"
+  },
+  "homepage": "https://github.com/songzhuozhu/agent-baton#readme",
+  "bugs": {
+    "url": "https://github.com/songzhuozhu/agent-baton/issues"
+  },
   "main": "./out/main/index.js",
   "private": true,
   "type": "module",
