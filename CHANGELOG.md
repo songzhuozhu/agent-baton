@@ -1,5 +1,15 @@
 # 更新记录
 
+## 0.1.1-preview.2 — 2026-09-19
+
+本版承接 `preview.1` 的全部体验与可靠性改进，修复发布复核时发现的测试、构建依赖安全告警。建议源码使用者切换至本版并重新执行 `npm ci`。
+
+- 在现有兼容版本范围内更新 Vitest、XML/YAML 与 URI 处理相关开发依赖。
+- 为 SQLite、构建工具及平台辅助依赖记录精确版本的安装脚本许可，修复新版 npm 干净安装后缺少原生构建文件的问题。
+- CI 增加依赖审计；中危及以上已知告警会阻止后续发布。
+- 2026-09-19 重新安装锁定依赖后，`npm audit` 为 0 项已知漏洞。
+- 本版仍为仅源码预览版，不包含签名安装包；功能验收边界和已知限制见[完整更新记录](https://github.com/songzhuozhu/agent-baton/blob/v0.1.1-preview.2/CHANGELOG.md)与[开发路线](https://github.com/songzhuozhu/agent-baton/blob/v0.1.1-preview.2/docs/roadmap.md)。
+
 ## 0.1.1-preview.1 — 2026-09-19
 
 本版为源码预览版，尚未完成 V1 验收，不包含签名安装包。

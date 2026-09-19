@@ -3,6 +3,9 @@
 ## 开始开发
 
 建议使用 Node.js 24（与 CI 一致）和 npm；使用 nvm 时先执行 `nvm use`，再用 `npm ci` 按锁文件安装依赖。
+
+仓库通过 `package.json` 的 `allowScripts` 为必要的原生构建依赖记录精确版本许可。支持该机制的 npm 会阻止未列出的依赖脚本；升级这些依赖后，请审阅新版本的安装脚本，再更新对应许可。
+
 提交前执行 `npm run check`，它包含 TypeScript 类型检查、Vitest 测试和 Electron Vite 构建。
 
 运行桌面应用使用 `npm run dev`；构建 macOS 本机目录包使用 `npm run package -- --mac dir`。
@@ -44,6 +47,6 @@ Electron 渲染进程保持 sandbox、context isolation 且禁止 Node integrati
 
 ## 预览发布
 
-`main` 的 macOS、Windows、Linux 三项源码检查全部通过后，CI 会为新的 `X.Y.Z-preview.N` 版本创建仅源码 GitHub 预发布。需同时更新 `package.json`、锁文件版本和 `CHANGELOG.md` 中对应章节。已有同名 Release 保持不变；普通分支、PR 和非预览版本不会触发发布。发布任务只使用该任务的 `contents: write` 权限，不需要仓库自定义令牌。
+`main` 的 macOS、Windows、Linux 三项源码检查全部通过后，CI 会为新的 `X.Y.Z-preview.N` 版本创建仅源码 GitHub 预发布。Ubuntu 检查还会执行 `npm audit --audit-level=moderate`，已知中危及以上依赖告警会阻止发布。需同时更新 `package.json`、锁文件版本和 `CHANGELOG.md` 中对应章节。已有同名 Release 保持不变；普通分支、PR 和非预览版本不会触发发布。发布任务只使用该任务的 `contents: write` 权限，不需要仓库自定义令牌。
 
 源码预发布不等于签名桌面安装包；正式发布和真实 Agent 验收按开发路线单独推进。

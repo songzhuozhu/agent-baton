@@ -1,7 +1,7 @@
 {
   "name": "agent-baton",
   "productName": "AgentBaton",
-  "version": "0.1.1-preview.1",
+  "version": "0.1.1-preview.2",
   "description": "One baton. Every agent.",
   "author": "AgentBaton Contributors",
   "license": "MIT",
@@ -70,6 +70,13 @@
     "jsdom": "^30.0.1",
     "typescript": "^7.0.2",
     "vite": "^7.3.6",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
+  },
+  "allowScripts": {
+    "better-sqlite3@13.0.3": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.2": true,
+    "electron-winstaller@5.4.0": true,
+    "fsevents@2.3.3": true
   }
 }

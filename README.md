@@ -24,7 +24,7 @@ AgentBaton is a local-first desktop skill manager for AI agents. Discover instal
 
 ## Preview release
 
-[v0.1.1-preview.1](https://github.com/songzhuozhu/agent-baton/releases/tag/v0.1.1-preview.1) is a **source-only prerelease**. It includes group forms, library filters, keyboard-accessible dialogs, clearer feedback, and fixes to adoption, Git sync, and restore handling. Signed installers are not included. See the [changelog](CHANGELOG.md) and [roadmap](docs/roadmap.md) (Chinese).
+[v0.1.1-preview.2](https://github.com/songzhuozhu/agent-baton/releases/tag/v0.1.1-preview.2) is a **source-only prerelease**. It includes group forms, library filters, keyboard-accessible dialogs, clearer feedback, fixes to adoption, Git sync, and restore handling, and security updates for development dependencies. Signed installers are not included. See the [changelog](CHANGELOG.md) and [roadmap](docs/roadmap.md) (Chinese).
 
 Known limitations include incomplete recovery from a failed multi-file undo, differences between live discovery and stored apply state, and managed symlinks reflecting library changes before a separate apply. Use disposable sample skills or backups while evaluating this preview. Full GitHub sync and real-agent/cross-platform validation remain incomplete.
 
@@ -97,7 +97,7 @@ Prerequisites: **Node.js 24**, npm, and Git. If you use nvm, run `nvm use` in th
 ```bash
 git clone https://github.com/songzhuozhu/agent-baton.git
 cd agent-baton
-git checkout v0.1.1-preview.1
+git checkout v0.1.1-preview.2
 npm ci
 npm run check
 npm run dev

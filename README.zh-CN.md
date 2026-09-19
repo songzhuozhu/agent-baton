@@ -24,7 +24,7 @@ AgentBaton 是一款本地优先的 AI Agent Skill 桌面管理工具。发现�
 
 ## 预览版本
 
-[v0.1.1-preview.1](https://github.com/songzhuozhu/agent-baton/releases/tag/v0.1.1-preview.1) 为**仅源码预览版**，包含分组表单、库筛选、键盘弹窗、操作反馈，以及纳管、Git 同步与恢复修复。本版不附带签名安装包。详见[更新记录](CHANGELOG.md)与[后续路线](docs/roadmap.md)。
+[v0.1.1-preview.2](https://github.com/songzhuozhu/agent-baton/releases/tag/v0.1.1-preview.2) 为**仅源码预览版**，包含分组表单、库筛选、键盘弹窗、操作反馈，以及纳管、Git 同步、恢复与开发依赖安全修复。本版不附带签名安装包。详见[更新记录](CHANGELOG.md)与[后续路线](docs/roadmap.md)。
 
 已知限制包括：多文件撤销中途失败后的补偿尚不完整，实时发现结果与存储的应用状态可能不一致，直接链接托管库的安装会提前反映库内容变化。建议使用示例 Skill 或已有备份评估本版。完整 GitHub 同步、真实 Agent 和跨平台验收仍未完成。
 
@@ -97,7 +97,7 @@ Git 同步基础已包含快照导出、恢复、手动 fetch/commit/push 和三
 ```bash
 git clone https://github.com/songzhuozhu/agent-baton.git
 cd agent-baton
-git checkout v0.1.1-preview.1
+git checkout v0.1.1-preview.2
 npm ci
 npm run check
 npm run dev
