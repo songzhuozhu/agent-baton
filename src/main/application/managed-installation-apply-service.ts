@@ -53,7 +53,8 @@ export class ManagedInstallationApplyService {
 
         const backupDirectory = await this.deployer.remove(
           operation.targetDirectory,
-          operation.expectedTargetHash
+          operation.expectedTargetHash,
+          operation.expectedSourceDirectory
         );
         removals.push({ targetDirectory: operation.targetDirectory, backupDirectory });
       }

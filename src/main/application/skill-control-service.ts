@@ -247,13 +247,17 @@ export class SkillControlService {
         return { skill, contentDirectory, contentHash: inspection.contentHash };
       })
     );
-    return buildManagedInstallationPlan({
+    const plan = buildManagedInstallationPlan({
       agent: adapter.agent,
       effectiveSkillIds: skillView.effectiveSkillIds,
       managedSkills,
       observedInstallations: this.stateStore.listObservedInstallations(),
       targetRoot
     });
+    plan.operations = await Promise.all(plan.operations.map(async (operation) => operation.kind === 'remove'
+      ? { ...operation, expectedSourceDirectory: await this.managedLibrary.canonicalContentDirectory(operation.skillId) }
+      : operation));
+    return plan;
   }
 
   hasExplicitDesiredState(agent: AgentKind): boolean {

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { cp, lstat, mkdir, rename, rm, symlink } from 'node:fs/promises';
+import { cp, lstat, mkdir, readlink, realpath, rename, rm, symlink } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { inspectSkillDirectory } from '../skills/skill-file-inspector';
 
@@ -73,10 +73,11 @@ export class ManagedInstallationDeployer {
     }
   }
 
-  async remove(targetDirectory: string, expectedTargetHash: string): Promise<string> {
+  async remove(targetDirectory: string, expectedTargetHash: string, expectedSourceDirectory?: string): Promise<string> {
     this.assertAllowedTarget(targetDirectory);
-    const actualTargetHash = await inspectContentHashOrMissing(targetDirectory);
-    if (actualTargetHash !== expectedTargetHash) {
+    const isDeletedManagedLink = expectedSourceDirectory !== undefined
+      && await isBrokenLinkTo(targetDirectory, expectedSourceDirectory);
+    if (!isDeletedManagedLink && await inspectContentHashOrMissing(targetDirectory) !== expectedTargetHash) {
       throw new ManagedDeploymentError(`Installation changed since planning: ${targetDirectory}`);
     }
     const backupDirectory = await this.backUpTargetIfPresent(targetDirectory);
@@ -154,6 +155,25 @@ export class ManagedInstallationDeployer {
     if (!this.allowedTargetRoots.some((root) => isContainedBy(root, targetDirectory))) {
       throw new ManagedDeploymentError(`Installation target escapes allowed roots: ${targetDirectory}`);
     }
+  }
+}
+
+async function isBrokenLinkTo(targetDirectory: string, expectedSourceDirectory: string): Promise<boolean> {
+  const targetStat = await lstat(targetDirectory).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === 'ENOENT') return undefined;
+    throw error;
+  });
+  if (!targetStat?.isSymbolicLink()) return false;
+  const linkedDirectory = resolve(dirname(targetDirectory), await readlink(targetDirectory));
+  if (linkedDirectory !== resolve(expectedSourceDirectory)) {
+    throw new ManagedDeploymentError(`Installation link changed since planning: ${targetDirectory}`);
+  }
+  try {
+    await realpath(targetDirectory);
+    return false;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return true;
+    throw error;
   }
 }
 

@@ -104,10 +104,11 @@ button:focus-visible, summary:focus-visible, select:focus-visible { outline: 2px
 .text-button { padding: 0; color: #a6cfb7; background: transparent; font-size: 12px; font-weight: 700; }
 .text-button:disabled { color: #79858d; }
 .danger-button { margin-top: 16px; color: #ffd0c8; background: #482622; font-size: 12px; font-weight: 700; }
-.modal-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 24px; background: #070a0ccc; }
-.modal { width: min(620px, 100%); max-height: min(720px, 90vh); overflow: auto; padding: 26px; border: 1px solid #3a474e; border-radius: 18px; background: #172027; box-shadow: 0 24px 100px #0008; }
+.page-controls, .modal-content { min-width: 0; margin: 0; padding: 0; border: 0; }
+.modal::backdrop { background: #070a0ccc; }
+.modal { width: min(620px, calc(100% - 48px)); max-height: min(720px, 90vh); overflow: auto; padding: 26px; border: 1px solid #3a474e; border-radius: 18px; color: #e8ebef; background: #172027; box-shadow: 0 24px 100px #0008; }
 .modal h2 { font-size: 25px; }
-.modal > p { color: #c3cbd2; line-height: 1.55; }
+.modal-content > p { color: #c3cbd2; line-height: 1.55; }
 .modal label { display: grid; gap: 7px; margin-top: 16px; color: #cbd4da; font-size: 14px; }
 .modal input:not([type="checkbox"]), .modal textarea { width: 100%; padding: 10px; border: 1px solid #3a4850; border-radius: 9px; color: #eef2f4; background: #11171c; font: inherit; }
 .modal textarea { min-height: 82px; resize: vertical; }
@@ -205,3 +206,49 @@ html[data-theme='light'] .mono { color: #26343b; background: #f1f4f3; }
   .library-filters { flex-direction: column; }
   .sync-connection { align-items: flex-start; flex-direction: column; }
 }
+
+/* Shared interaction states and readable secondary text in both theme modes. */
+:root { --secondary-text: #b7c1c9; --action-text: #a6cfb7; --focus-ring: #a6cfb7; }
+html[data-theme='light'] { --secondary-text: #52626b; --action-text: #326747; --focus-ring: #326747; }
+@media (prefers-color-scheme: light) {
+  html[data-theme='system'] { --secondary-text: #52626b; --action-text: #326747; --focus-ring: #326747; }
+}
+.eyebrow, .text-button, .card-action, .batch-selection legend { color: var(--action-text); }
+.theme-picker, .attention dt, .group-row small, .skill-card small,
+.batch-actions small, .toolbar-menu-panel p, .library-filters label,
+.filter-summary, .operation-status { color: var(--secondary-text); }
+.modal { color: inherit; }
+.modal-content > p:not(.warning), .modal label, .modal .operation-list { color: var(--secondary-text); }
+:where(button, summary, select, input, textarea, a):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+.error-banner { display: flex; align-items: center; justify-content: space-between; gap: 16px; overflow-wrap: anywhere; }
+.error-banner .text-button { color: inherit; flex-shrink: 0; }
+.modal-error { margin: 18px 0; }
+.operation-status { margin: 0 0 18px; font-size: 14px; }
+.library-scopes { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.library-scopes button[aria-pressed='true'] { box-shadow: inset 0 0 0 2px var(--action-text); }
+.filter-summary { font-size: 13px; }
+.library-empty { grid-column: 1 / -1; padding: 28px; border: 1px dashed var(--secondary-text); border-radius: 12px; }
+.library-empty p { max-width: 65ch; margin: 12px 0 20px; color: var(--secondary-text); line-height: 1.65; }
+.skill-card h3 { overflow-wrap: anywhere; min-width: 0; }
+.skill-card .card-header { align-items: flex-start; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.skill-card small { display: block; overflow-wrap: anywhere; line-height: 1.6; }
+.skill-card .text-button { min-height: 28px; text-align: left; }
+.modal-actions { flex-wrap: wrap; }
+.modal-actions .danger-button { margin-top: 0; }
+@media (max-width: 1050px) {
+  .topbar { grid-template-columns: 1fr; padding-bottom: 32px; }
+  .header-actions { justify-content: flex-start; }
+  .skill-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .attention { flex-wrap: wrap; }
+  .group-row { align-items: flex-start; flex-wrap: wrap; }
+}
+@media (max-width: 720px) {
+  .skill-grid { grid-template-columns: 1fr; }
+  .section-heading { align-items: flex-start; flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  button { transition: none; }
+  button:not(:disabled):hover { transform: none; }
+}
+
+.modal-content > .warning { color: #ffd796; }

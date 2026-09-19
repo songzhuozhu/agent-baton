@@ -18,6 +18,16 @@ AgentBaton 是一款本地优先的 AI Agent Skill 桌面管理工具。发现�
 
 **开发预览：** 本地管理核心已实现，尚未完成 V1 验收。GitHub 授权、同步冲突解决及跨平台运行验证仍有缺口。目前请从源码运行，桌面界面为简体中文。
 
+![AgentBaton 浅色主题的 Agent 状态首页](docs/assets/interface-preview.png)
+
+*界面预览使用隔离的示例数据，展示当前布局，不代表真实 Agent 集成已完成验收。*
+
+## 预览版本
+
+[v0.1.1-preview.1](https://github.com/songzhuozhu/agent-baton/releases/tag/v0.1.1-preview.1) 为**仅源码预览版**，包含分组表单、库筛选、键盘弹窗、操作反馈，以及纳管、Git 同步与恢复修复。本版不附带签名安装包。详见[更新记录](CHANGELOG.md)与[后续路线](docs/roadmap.md)。
+
+已知限制包括：多文件撤销中途失败后的补偿尚不完整，实时发现结果与存储的应用状态可能不一致，直接链接托管库的安装会提前反映库内容变化。建议使用示例 Skill 或已有备份评估本版。完整 GitHub 同步、真实 Agent 和跨平台验收仍未完成。
+
 ## 为什么做 AgentBaton？
 
 工作项目、个人开发和 AI 剪辑需要的能力并不相同。公司内部接口规范、前端设计工具和视频处理流程，不必始终一起启用。
@@ -82,15 +92,18 @@ Git 同步基础已包含快照导出、恢复、手动 fetch/commit/push 和三
 
 ## 从源码运行
 
-准备 **Node.js 24**、npm 和 Git。Electron 需要图形桌面环境。安装依赖会下载平台相关组件，原生依赖可能需要操作系统的编译工具。
+准备 **Node.js 24**、npm 和 Git。使用 nvm 的开发者可在项目目录执行 `nvm use`，仓库已提供 `.nvmrc`。Electron 需要图形桌面环境。安装依赖会下载平台相关组件，原生依赖可能需要操作系统的编译工具。
 
 ```bash
 git clone https://github.com/songzhuozhu/agent-baton.git
 cd agent-baton
+git checkout v0.1.1-preview.1
 npm ci
 npm run check
 npm run dev
 ```
+
+上述 checkout 固定到本说明对应的预览版；参与开发时可省略，直接使用 `main`。
 
 `npm run check` 依次运行类型检查、自动化测试和生产构建，不会启动桌面应用，也不会修改真实 Agent 安装目录。
 
@@ -132,7 +145,7 @@ GitHub App Device Flow 实现从应用进程环境读取 `AGENT_BATON_GITHUB_APP
 
 ## 当前进度
 
-最近一次本机验证（**2026-09-12**）：**36 个测试文件、76 个测试通过**，类型检查和生产构建通过。
+最近一次本机验证（**2026-09-19**）：**37 个测试文件、121 个测试通过**，类型检查和生产构建通过。
 
 V1 验收前仍需完成：
 

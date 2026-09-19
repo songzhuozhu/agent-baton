@@ -1,4 +1,4 @@
-import { lstat, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { lstat, mkdtemp, mkdir, readFile, readlink, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -75,5 +75,42 @@ describe('ManagedInstallationDeployer', () => {
     await deployer.rollback(result);
 
     await expect(readFile(join(target, 'SKILL.md'), 'utf8')).resolves.toContain('before');
+  });
+
+  it.each([false, true])('preserves an externally redirected link (replacement exists: %s)', async (replacementExists) => {
+    const workspace = await mkdtemp(join(tmpdir(), 'agent-baton-deploy-'));
+    temporaryDirectories.push(workspace);
+    const source = await createSkillDirectory(workspace, 'source', 'canonical');
+    const targetRoot = join(workspace, 'agent-skills');
+    const target = join(targetRoot, 'design');
+    const deployer = new ManagedInstallationDeployer(join(workspace, 'backups'), [targetRoot]);
+    const deployed = await deployer.deploy({ sourceDirectory: source, targetDirectory: target, expectedTargetHash: null, preferredMode: 'symlink' });
+    const originalSource = await readlink(target);
+    const external = join(workspace, 'external');
+    if (replacementExists) {
+      await mkdir(external);
+      // Identical bytes do not transfer ownership of a redirected link.
+      await writeFile(join(external, 'SKILL.md'), await readFile(join(source, 'SKILL.md')));
+    }
+    await rm(target);
+    await symlink(external, target, process.platform === 'win32' ? 'junction' : 'dir');
+    await rm(source, { recursive: true });
+
+    await expect(deployer.remove(target, deployed.sourceHash, originalSource)).rejects.toBeInstanceOf(ManagedDeploymentError);
+    await expect(readlink(target)).resolves.toBe(external);
+  });
+
+  it('does not remove a dangling link without a known managed source', async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'agent-baton-deploy-'));
+    temporaryDirectories.push(workspace);
+    const source = await createSkillDirectory(workspace, 'source', 'canonical');
+    const targetRoot = join(workspace, 'agent-skills');
+    const target = join(targetRoot, 'design');
+    const deployer = new ManagedInstallationDeployer(join(workspace, 'backups'), [targetRoot]);
+    const deployed = await deployer.deploy({ sourceDirectory: source, targetDirectory: target, expectedTargetHash: null, preferredMode: 'symlink' });
+    await rm(source, { recursive: true });
+
+    await expect(deployer.remove(target, deployed.sourceHash)).rejects.toThrow();
+    expect((await lstat(target)).isSymbolicLink()).toBe(true);
   });
 });

@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { lstat, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -7,6 +7,7 @@ import { ManagedLibrary } from '../library/managed-library';
 import { LocalStateStore } from '../storage/local-state-store';
 import { SkillControlService } from './skill-control-service';
 import { ApplyPlanError, ApplyPlanService } from './apply-plan-service';
+import { ManagedSkillDeletionService } from './managed-skill-deletion-service';
 
 const temporaryDirectories: string[] = [];
 
@@ -79,6 +80,42 @@ describe('ApplyPlanService', () => {
     try {
       const preview = await service.preview(adapter, new Date('2026-08-09T00:00:00.000Z'));
       await expect(service.confirm(preview.id, new Date('2026-08-09T00:16:00.000Z'))).rejects.toThrow('已过期');
+    } finally {
+      store.close();
+    }
+  });
+
+  it('removes the registered installation after its canonical Skill is deleted', async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'agent-baton-plan-'));
+    temporaryDirectories.push(workspace);
+    const source = join(workspace, 'source');
+    await mkdir(source);
+    await writeFile(join(source, 'SKILL.md'), '---\nname: design\n---\ncanonical');
+    const store = new LocalStateStore(':memory:');
+    const library = new ManagedLibrary(join(workspace, 'library'));
+    const control = new SkillControlService(store, library);
+    const adapter: AgentAdapter = {
+      agent: 'codex',
+      detect: async () => ({ agent: 'codex', availability: 'detected', detail: 'fixture' }),
+      discoverUserSkills: async () => ({ installations: [], issues: [] }),
+      assessSkill: async () => ({ status: 'compatible', detail: 'fixture' }),
+      managedSkillRoot: () => join(workspace, 'target')
+    };
+    const service = new ApplyPlanService(control, store, join(workspace, 'backups'));
+    try {
+      const skill = await control.adoptSkill({ sourceDirectory: source });
+      control.setSkillOverride('codex', skill.id, 'force-enable');
+      const apply = await service.preview(adapter);
+      await service.confirm(apply.id);
+      const target = apply.plan.operations[0].targetDirectory;
+      const deletions = new ManagedSkillDeletionService(store, library);
+      await deletions.confirm(deletions.preview(skill.id).id);
+
+      const cleanup = await service.preview(adapter);
+      expect(cleanup.plan.operations).toMatchObject([{ kind: 'remove', skillId: skill.id }]);
+      await expect(service.confirm(cleanup.id)).resolves.toMatchObject({ appliedOperationCount: 1 });
+      await expect(lstat(target)).rejects.toMatchObject({ code: 'ENOENT' });
+      expect(store.listObservedInstallations()).toEqual([]);
     } finally {
       store.close();
     }

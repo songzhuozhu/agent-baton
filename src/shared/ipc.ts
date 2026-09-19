@@ -4,6 +4,7 @@ export interface DashboardAgentSummary {
   status: 'detected' | 'not-detected' | 'read-only' | 'unsupported-platform';
   currentEnabledCount: number;
   desiredEnabledCount: number;
+  hasPendingChanges?: boolean;
   restartRequired: boolean;
 }
 

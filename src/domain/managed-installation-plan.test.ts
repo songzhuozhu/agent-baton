@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { ManagedSkill, ObservedInstallation } from '../shared/domain';
 import { buildManagedInstallationPlan, managedInstallationTarget } from './managed-installation-plan';
@@ -81,6 +82,6 @@ describe('buildManagedInstallationPlan', () => {
   });
 
   it('uses a stable deployment target that does not depend on a mutable folder name', () => {
-    expect(managedInstallationTarget('/skills', design)).toBe('/skills/frontend-design-abcdef12');
+    expect(managedInstallationTarget('/skills', design)).toBe(join('/skills', 'frontend-design-abcdef12'));
   });
 });

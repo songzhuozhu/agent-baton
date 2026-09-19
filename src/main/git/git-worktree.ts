@@ -154,7 +154,9 @@ export class GitWorktree {
     await this.run(['add', '--all', '--', 'agent-baton']);
     const staged = await this.run(['diff', '--cached', '--name-only', '--', 'agent-baton']);
     if (!staged) return undefined;
-    await this.run(['commit', '--no-verify', '-m', message.trim()]);
+    // A path-limited commit uses Git's temporary index and preserves unrelated
+    // staged changes, which must never be included in a portable sync push.
+    await this.run(['commit', '--only', '--no-verify', '-m', message.trim(), '--', 'agent-baton']);
     return this.run(['rev-parse', 'HEAD']);
   }
 

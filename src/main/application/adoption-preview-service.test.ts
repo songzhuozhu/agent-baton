@@ -63,6 +63,27 @@ describe('AdoptionPreviewService', () => {
     }
   });
 
+  it('rejects source changes after preview instead of adopting unreviewed content', async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'agent-baton-adopt-'));
+    temporaryDirectories.push(workspace);
+    const source = join(workspace, 'source');
+    await mkdir(source);
+    await writeFile(join(source, 'SKILL.md'), '---\nname: design\n---\nReviewed content');
+    const store = new LocalStateStore(':memory:');
+    const control = new SkillControlService(store, new ManagedLibrary(join(workspace, 'library')));
+    const service = new AdoptionPreviewService(control);
+    try {
+      const preview = await service.preview(source);
+      await writeFile(join(source, 'unexpected.sh'), 'echo unreviewed');
+
+      await expect(service.confirm(preview.id, {})).rejects.toThrow('内容已变化');
+      expect(store.listSkills()).toEqual([]);
+      await expect(service.confirm(preview.id, {})).rejects.toThrow('不存在或已被使用');
+    } finally {
+      store.close();
+    }
+  });
+
   it('stages an upstream source and persists its immutable update baseline only after confirmation', async () => {
     const workspace = await mkdtemp(join(tmpdir(), 'agent-baton-adopt-'));
     temporaryDirectories.push(workspace);

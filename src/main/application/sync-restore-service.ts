@@ -64,28 +64,42 @@ export class SyncRestoreService {
       this.pending.delete(previewId);
       throw new Error('同步恢复预览不存在或已过期，请重新预览。');
     }
-    if (pending.conflicts.length > 0) {
+    this.pending.delete(previewId);
+    if (pending.conflicts.length > 0 || this.findConflicts(pending.snapshot).length > 0) {
       throw new Error('存在本地与远端冲突，必须先解决后才能恢复。');
     }
-    this.pending.delete(previewId);
     const importedIds: string[] = [];
     try {
+      const baseline = await mergeStateFromSnapshot(pending.snapshot);
+      const expectedHashes = new Map(baseline.skills.map((skill) => [skill.metadata.id, skill.contentHash]));
       const skills: ManagedSkill[] = [];
       for (const incoming of pending.snapshot.skills) {
         const adopted = await this.managedLibrary.adopt(incoming.metadata.id, incoming.contentDirectory);
         importedIds.push(incoming.metadata.id);
+        const inspection = await inspectSkillDirectory(adopted.contentDirectory);
+        if (inspection.contentHash !== expectedHashes.get(incoming.metadata.id)) {
+          throw new Error('同步源内容在恢复期间发生变化，请重新预览。');
+        }
         skills.push({
           id: incoming.metadata.id,
           name: incoming.metadata.name,
-          originalDescription: adopted.inspection.originalDescription,
+          originalDescription: inspection.originalDescription,
           ...(incoming.metadata.userDescription ? { userDescription: incoming.metadata.userDescription } : {}),
           tags: incoming.metadata.tags,
           syncPolicy: 'sync-allowed',
           source: incoming.metadata.source
         });
       }
-      this.saveImportedState(skills, pending.snapshot);
-      this.stateStore.saveSyncBaseline(pending.connectionId, await mergeStateFromSnapshot(pending.snapshot));
+      this.stateStore.commitSyncRestore({
+        skills,
+        groups: pending.snapshot.groups,
+        desiredStates: pending.snapshot.agentStates,
+        tombstones: pending.snapshot.tombstones.map((tombstone) => ({
+          id: tombstone.id, deletedAt: tombstone.deletedAt, syncAllowed: true
+        })),
+        connectionId: pending.connectionId,
+        baseline
+      });
     } catch (error) {
       await Promise.all(importedIds.reverse().map(async (skillId) => {
         try {
@@ -98,24 +112,15 @@ export class SyncRestoreService {
     }
   }
 
-  private saveImportedState(skills: readonly ManagedSkill[], snapshot: SyncRepositorySnapshot): void {
-    // Collision checks happen in preview. Writing desired state here is local
-    // intent only and deliberately does not create an Installation.
-    for (const skill of skills) this.stateStore.saveSkill(skill);
-    for (const group of snapshot.groups) this.stateStore.saveGroup(group);
-    for (const state of snapshot.agentStates) this.stateStore.saveDesiredAgentState(state);
-    for (const tombstone of snapshot.tombstones) {
-      this.stateStore.saveSkillTombstone({ id: tombstone.id, deletedAt: tombstone.deletedAt, syncAllowed: true });
-    }
-  }
-
   private findConflicts(snapshot: SyncRepositorySnapshot): string[] {
     const localSkills = new Set(this.stateStore.listSkills().map((skill) => skill.id));
+    const localTombstones = new Set(this.stateStore.listSkillTombstones().map((tombstone) => tombstone.id));
     const localGroups = new Set(this.stateStore.listGroups().map((group) => group.id));
     const localStates = new Set(this.stateStore.listDesiredAgentStates().map((state) => state.agent));
     const remoteSkills = new Set(snapshot.skills.map((skill) => skill.metadata.id));
     const conflicts = [
       ...snapshot.skills.filter((skill) => localSkills.has(skill.metadata.id)).map((skill) => `Skill ID 已存在：${skill.metadata.id}`),
+      ...snapshot.skills.filter((skill) => localTombstones.has(skill.metadata.id)).map((skill) => `Skill 已被本地删除：${skill.metadata.id}`),
       ...snapshot.groups.filter((group) => localGroups.has(group.id)).map((group) => `Skill Group ID 已存在：${group.id}`),
       ...snapshot.agentStates.filter((state) => localStates.has(state.agent)).map((state) => `Agent 期望状态已存在：${state.agent}`),
       ...snapshot.tombstones.filter((tombstone) => localSkills.has(tombstone.id) || remoteSkills.has(tombstone.id)).map((tombstone) => `删除墓碑与 Skill 同时存在：${tombstone.id}`)

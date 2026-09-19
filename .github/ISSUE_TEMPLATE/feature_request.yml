@@ -1,0 +1,22 @@
+name: 体验改进建议
+description: 描述真实使用场景与阻碍，帮助确定下一步优先级。
+title: "[体验] "
+body:
+  - type: textarea
+    id: scenario
+    attributes:
+      label: 你想完成什么任务？
+      description: 请描述使用哪个 Agent、管理什么场景，以及当前卡在哪里。
+    validations:
+      required: true
+  - type: textarea
+    id: improvement
+    attributes:
+      label: 希望如何改善？
+      description: 可以描述操作前后有什么不同，无需先设计具体实现。
+    validations:
+      required: true
+  - type: textarea
+    id: workaround
+    attributes:
+      label: 目前如何绕过这个问题？

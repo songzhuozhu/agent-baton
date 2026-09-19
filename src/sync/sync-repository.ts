@@ -81,13 +81,12 @@ export class SyncRepository {
     const format = await readJson(join(root, 'format.json'));
     assertFormat(format);
     const skills = await this.readSkills(root);
-    const rawGroups = await this.readJsonDirectory<unknown>(join(root, 'groups'));
-    const rawAgentStates = await this.readJsonDirectory<unknown>(join(root, 'agent-states'));
-    const tombstones = await this.readJsonDirectory<SkillTombstone>(join(root, 'tombstones'));
-
-    const groups = rawGroups.map(toCoreGroup);
-    const agentStates = rawAgentStates.map(toCoreAgentState);
-    for (const tombstone of tombstones) assertTombstone(tombstone);
+    const groups = await this.readJsonDirectory(join(root, 'groups'), toCoreGroup, (group) => group.id);
+    const agentStates = await this.readJsonDirectory(join(root, 'agent-states'), toCoreAgentState, (state) => state.agent);
+    const tombstones = await this.readJsonDirectory(join(root, 'tombstones'), (value) => {
+      assertTombstone(value);
+      return value;
+    }, (tombstone) => tombstone.id);
     return {
       skills: skills.sort((left, right) => left.metadata.id.localeCompare(right.metadata.id)),
       groups: groups.sort((left, right) => left.id.localeCompare(right.id)),
@@ -103,6 +102,7 @@ export class SyncRepository {
    */
   async write(input: WriteSyncRepositoryInput): Promise<void> {
     assertPortableSnapshot(input.snapshot);
+    for (const tombstone of input.tombstones ?? []) assertTombstone(tombstone);
     const existing = await this.read();
     void existing;
 
@@ -191,7 +191,7 @@ export class SyncRepository {
     return skills;
   }
 
-  private async readJsonDirectory<T>(directory: string): Promise<T[]> {
+  private async readJsonDirectory<T>(directory: string, parse: (value: unknown) => T, id: (record: T) => string): Promise<T[]> {
     if (!(await pathExists(directory))) return [];
     const entries = await readdir(directory, { withFileTypes: true });
     const records: T[] = [];
@@ -199,7 +199,11 @@ export class SyncRepository {
       if (!entry.isFile() || !entry.name.endsWith('.json')) {
         throw new SyncRepositoryError(`同步仓库中存在非法 JSON 条目：${entry.name}`);
       }
-      records.push(await readJson(join(directory, entry.name)) as T);
+      const record = parse(await readJson(join(directory, entry.name)));
+      if (entry.name !== `${id(record)}.json`) {
+        throw new SyncRepositoryError(`同步元数据 ID 与文件名不一致：${entry.name}`);
+      }
+      records.push(record);
     }
     return records;
   }
@@ -209,6 +213,7 @@ export function toPortableSkillMetadata(skill: ManagedSkill): PortableSkillMetad
   if (skill.syncPolicy !== 'sync-allowed') {
     throw new SyncRepositoryError(`Local Only Skill 不能写入同步仓库：${skill.id}`);
   }
+  assertPortableSkillMetadata({ ...skill, schemaVersion: SYNC_SCHEMA_VERSION });
   return {
     id: skill.id,
     schemaVersion: SYNC_SCHEMA_VERSION,
@@ -264,16 +269,18 @@ function assertFormat(value: unknown): asserts value is { format: string; schema
 
 function assertPortableSnapshot(snapshot: PortableSnapshot): void {
   for (const { skill } of snapshot.skills) toPortableSkillMetadata(skill);
+  for (const { group } of snapshot.groups) toCoreGroup({ ...group, schemaVersion: SYNC_SCHEMA_VERSION });
+  for (const { state } of snapshot.agentStates) toCoreAgentState({ ...state, schemaVersion: SYNC_SCHEMA_VERSION });
 }
 
 function assertPortableSkillMetadata(value: unknown): asserts value is PortableSkillMetadata {
-  if (!isRecord(value) || typeof value.id !== 'string' || typeof value.name !== 'string' || value.schemaVersion !== SYNC_SCHEMA_VERSION || value.syncPolicy !== 'sync-allowed' || !Array.isArray(value.tags) || !value.tags.every((tag) => typeof tag === 'string') || !isRecord(value.source)) {
+  if (!isRecord(value) || !isSafeId(value.id) || typeof value.name !== 'string' || (value.userDescription !== undefined && typeof value.userDescription !== 'string') || value.schemaVersion !== SYNC_SCHEMA_VERSION || value.syncPolicy !== 'sync-allowed' || !Array.isArray(value.tags) || !value.tags.every((tag) => typeof tag === 'string') || !isSkillSource(value.source)) {
     throw new SyncRepositoryError('同步 Skill metadata 无效。');
   }
 }
 
 function toCoreGroup(value: unknown): SkillGroup {
-  if (!isRecord(value) || typeof value.id !== 'string' || typeof value.name !== 'string' || typeof value.participatesInSync !== 'boolean' || !Array.isArray(value.skillIds) || !value.skillIds.every((id) => typeof id === 'string') || value.schemaVersion !== SYNC_SCHEMA_VERSION) {
+  if (!isRecord(value) || !isSafeId(value.id) || typeof value.name !== 'string' || typeof value.participatesInSync !== 'boolean' || !Array.isArray(value.skillIds) || !value.skillIds.every(isSafeId) || value.schemaVersion !== SYNC_SCHEMA_VERSION) {
     throw new SyncRepositoryError('同步 Group 无效。');
   }
   return {
@@ -285,7 +292,7 @@ function toCoreGroup(value: unknown): SkillGroup {
 }
 
 function toCoreAgentState(value: unknown): DesiredAgentState {
-  if (!isRecord(value) || !AGENT_KINDS.includes(value.agent as DesiredAgentState['agent']) || !Array.isArray(value.activeGroupIds) || !value.activeGroupIds.every((id) => typeof id === 'string') || !isRecord(value.overrides) || !Object.values(value.overrides).every((override) => override === 'force-enable' || override === 'force-disable') || value.schemaVersion !== SYNC_SCHEMA_VERSION) {
+  if (!isRecord(value) || !AGENT_KINDS.includes(value.agent as DesiredAgentState['agent']) || !Array.isArray(value.activeGroupIds) || !value.activeGroupIds.every(isSafeId) || !isRecord(value.overrides) || !Object.keys(value.overrides).every(isSafeId) || !Object.values(value.overrides).every((override) => override === 'force-enable' || override === 'force-disable') || value.schemaVersion !== SYNC_SCHEMA_VERSION) {
     throw new SyncRepositoryError('同步 Agent State 无效。');
   }
   return {
@@ -296,9 +303,26 @@ function toCoreAgentState(value: unknown): DesiredAgentState {
 }
 
 function assertTombstone(value: unknown): asserts value is SkillTombstone {
-  if (!isRecord(value) || value.entity !== 'skill' || typeof value.id !== 'string' || typeof value.deletedAt !== 'string' || value.schemaVersion !== SYNC_SCHEMA_VERSION) {
+  if (!isRecord(value) || value.entity !== 'skill' || !isSafeId(value.id) || typeof value.deletedAt !== 'string' || !Number.isFinite(Date.parse(value.deletedAt)) || value.schemaVersion !== SYNC_SCHEMA_VERSION) {
     throw new SyncRepositoryError('同步删除墓碑无效。');
   }
+}
+
+function isSafeId(value: unknown): value is string {
+  // Match the managed library's portable identifiers on every supported OS.
+  return typeof value === 'string' && /^[a-zA-Z0-9-]+$/.test(value);
+}
+
+function isSkillSource(value: unknown): value is ManagedSkill['source'] {
+  if (!isRecord(value)) return false;
+  if (value.kind === 'local') return true;
+  if (value.kind !== 'upstream') return false;
+  return typeof value.repositoryUrl === 'string' && value.repositoryUrl.trim().length > 0
+    && typeof value.relativePath === 'string'
+    && !/^(?:[/\\]|[a-zA-Z]:)/.test(value.relativePath)
+    && !value.relativePath.split(/[/\\]/).includes('..')
+    && typeof value.baselineCommit === 'string' && value.baselineCommit.length > 0
+    && typeof value.contentHash === 'string' && value.contentHash.length > 0;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

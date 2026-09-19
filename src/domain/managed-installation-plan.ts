@@ -14,6 +14,8 @@ export type ManagedInstallationOperation =
       skillId: string;
       targetDirectory: string;
       expectedTargetHash: string;
+      /** Original canonical location, including after its Skill moves to trash. */
+      expectedSourceDirectory?: string;
     };
 
 export interface ManagedSkillContent {

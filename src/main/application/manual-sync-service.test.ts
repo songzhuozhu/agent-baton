@@ -79,7 +79,7 @@ describe('ManualSyncService', () => {
     const first = await service.preview(checkout);
     await service.confirm(first.id);
     await writeFile(join(checkout, 'agent-baton', 'groups', 'manual-edit.json'), JSON.stringify({
-      id: 'group-manual', name: 'Manual edit', participatesInSync: true, skillIds: [], schemaVersion: 1
+      id: 'manual-edit', name: 'Manual edit', participatesInSync: true, skillIds: [], schemaVersion: 1
     }));
 
     const preview = await service.preview(checkout);

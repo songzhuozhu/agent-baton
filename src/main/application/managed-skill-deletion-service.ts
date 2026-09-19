@@ -91,7 +91,7 @@ export class ManagedSkillDeletionService {
     try {
       this.stateStore.restoreDeletedManagedSkill(skillId);
     } catch (error) {
-      await this.managedLibrary.trash(skillId, now);
+      await this.managedLibrary.returnToTrash(skillId, recovery.trashDirectory);
       throw error;
     }
   }

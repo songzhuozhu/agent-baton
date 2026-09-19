@@ -38,6 +38,15 @@ export interface LocalErrorLog {
   message: string;
 }
 
+export interface SyncRestoreCommit {
+  skills: readonly ManagedSkill[];
+  groups: readonly SkillGroup[];
+  desiredStates: readonly DesiredAgentState[];
+  tombstones: readonly LocalSkillTombstone[];
+  connectionId: string;
+  baseline: SyncMergeState;
+}
+
 interface StoredJsonRow {
   key: string;
   payload: string;
@@ -213,6 +222,35 @@ export class LocalStateStore {
 
   saveSyncBaseline(connectionId: string, baseline: SyncMergeState): void {
     this.saveJson('sync_baselines', connectionId, baseline);
+  }
+
+  commitSyncRestore(input: SyncRestoreCommit): void {
+    const transaction = this.database.transaction(() => {
+      // Check collisions inside the same transaction as the writes so a
+      // restore never replaces local intent created while files were copied.
+      for (const skill of input.skills) {
+        if (this.getJson('managed_skills', skill.id) || this.getJson('skill_tombstones', skill.id)) {
+          throw new Error(`同步恢复冲突：Skill ID 已存在或已被本地删除：${skill.id}`);
+        }
+      }
+      for (const group of input.groups) {
+        if (this.getJson('skill_groups', group.id)) throw new Error(`同步恢复冲突：Skill Group ID 已存在：${group.id}`);
+      }
+      for (const state of input.desiredStates) {
+        if (this.getJson('desired_agent_states', state.agent)) throw new Error(`同步恢复冲突：Agent 期望状态已存在：${state.agent}`);
+      }
+      for (const tombstone of input.tombstones) {
+        if (this.getJson('managed_skills', tombstone.id) || input.skills.some((skill) => skill.id === tombstone.id)) {
+          throw new Error(`同步恢复冲突：删除墓碑与 Skill 同时存在：${tombstone.id}`);
+        }
+      }
+      for (const skill of input.skills) this.saveSkill(skill);
+      for (const group of input.groups) this.saveGroup(group);
+      for (const state of input.desiredStates) this.saveDesiredAgentState(state);
+      for (const tombstone of input.tombstones) this.saveSkillTombstone(tombstone);
+      this.saveSyncBaseline(input.connectionId, input.baseline);
+    });
+    transaction();
   }
 
   getSyncBaseline(connectionId: string): SyncMergeState | undefined {

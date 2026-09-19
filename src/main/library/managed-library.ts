@@ -40,6 +40,13 @@ export class ManagedLibrary {
     return join(this.skillDirectory(skillId), 'content');
   }
 
+  async canonicalContentDirectory(skillId: string): Promise<string> {
+    assertSafeSkillId(skillId);
+    // The skills parent remains after trashing a Skill. Resolving it also
+    // preserves the original link destination on systems with aliased paths.
+    return join(await realpath(join(this.rootDirectory, 'skills')), skillId, 'content');
+  }
+
   async adopt(skillId: string, sourceDirectory: string): Promise<AdoptedSkill> {
     assertSafeSkillId(skillId);
     const inspection = await inspectSkillDirectory(sourceDirectory);
@@ -92,6 +99,20 @@ export class ManagedLibrary {
     await mkdir(dirname(destination), { recursive: true });
     await rename(trashDirectory, destination);
     return this.contentDirectory(skillId);
+  }
+
+  /** Restores the existing recovery location when its database commit fails. */
+  async returnToTrash(skillId: string, trashDirectory: string): Promise<void> {
+    assertSafeSkillId(skillId);
+    const trashRoot = join(this.rootDirectory, 'trash');
+    if (resolve(trashDirectory) === resolve(trashRoot) || !isContainedBy(trashRoot, trashDirectory)) {
+      throw new ManagedLibraryError('Recovery directory must be inside the managed trash.');
+    }
+    if (await pathExists(trashDirectory)) {
+      throw new ManagedLibraryError('Recovery directory already exists.');
+    }
+    await mkdir(dirname(trashDirectory), { recursive: true });
+    await rename(this.skillDirectory(skillId), trashDirectory);
   }
 
   /** Copies a canonical Skill for a portable export without trusting links. */

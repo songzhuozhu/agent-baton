@@ -38,9 +38,10 @@ describe('inspectSkillDirectory', () => {
     expect(result.files.map((file) => file.relativePath)).toEqual(expect.arrayContaining(['asset.bin', 'SKILL.md', 'scripts/setup.sh', 'setup-link']));
     expect(result.risks).toEqual([
       { kind: 'binary-file', relativePath: 'asset.bin' },
-      { kind: 'executable-file', relativePath: 'scripts/setup.sh' },
+      // Windows does not expose POSIX executable permission bits.
+      ...(process.platform === 'win32' ? [] : [{ kind: 'executable-file', relativePath: 'scripts/setup.sh' }]),
       { kind: 'script-file', relativePath: 'scripts/setup.sh' },
-      { kind: 'symlink', relativePath: 'setup-link', detail: 'scripts/setup.sh' }
+      { kind: 'symlink', relativePath: 'setup-link', detail: join('scripts', 'setup.sh') }
     ]);
   });
 

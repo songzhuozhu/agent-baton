@@ -1,0 +1,41 @@
+name: 问题反馈
+description: 报告可复现的问题，帮助我们定位并修复。
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请不要上传私密 Skill 正文、访问令牌、完整绝对路径或未脱敏日志。
+        涉及数据丢失时，请先保留本地备份并说明最后一次成功操作。
+  - type: input
+    id: version
+    attributes:
+      label: AgentBaton 版本或 Commit
+      placeholder: 例如 0.1.0 / git rev-parse --short HEAD
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 操作系统、架构与 Agent 版本
+      placeholder: 例如 macOS / ARM64 / Codex 版本；源码运行请附 Node.js 版本
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 最小复现步骤
+      description: 从哪一个页面开始，点击了什么，是否每次都会发生？
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期结果与实际结果
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 脱敏后的错误信息或截图
+      description: 可从“更多操作 → 查看本机错误”取得错误信息；请先检查并去除隐私内容。

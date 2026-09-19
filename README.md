@@ -18,6 +18,16 @@ AgentBaton is a local-first desktop skill manager for AI agents. Discover instal
 
 **Development preview:** the local management core is implemented; V1 acceptance is not complete. GitHub authorization, conflict resolution, and cross-platform runtime validation still have gaps. Start from source; the desktop UI is currently in Simplified Chinese.
 
+![AgentBaton agent dashboard in the light theme](docs/assets/interface-preview.png)
+
+*The screenshot uses isolated example data. It demonstrates the interface, not verified integration with real agents.*
+
+## Preview release
+
+[v0.1.1-preview.1](https://github.com/songzhuozhu/agent-baton/releases/tag/v0.1.1-preview.1) is a **source-only prerelease**. It includes group forms, library filters, keyboard-accessible dialogs, clearer feedback, and fixes to adoption, Git sync, and restore handling. Signed installers are not included. See the [changelog](CHANGELOG.md) and [roadmap](docs/roadmap.md) (Chinese).
+
+Known limitations include incomplete recovery from a failed multi-file undo, differences between live discovery and stored apply state, and managed symlinks reflecting library changes before a separate apply. Use disposable sample skills or backups while evaluating this preview. Full GitHub sync and real-agent/cross-platform validation remain incomplete.
+
 ## Why AgentBaton?
 
 Your tools change with the work. An internal development skill, a frontend design skill, and a video-editing skill should not have to travel together.
@@ -82,15 +92,18 @@ See the [compatibility research](docs/research/agent-adapter-compatibility-matri
 
 ## Run from source
 
-Prerequisites: **Node.js 24**, npm, and Git. Electron requires a graphical desktop. Installing dependencies downloads platform-specific packages; native dependencies may require your OS's build tools.
+Prerequisites: **Node.js 24**, npm, and Git. If you use nvm, run `nvm use` in the project directory to select the version from `.nvmrc`. Electron requires a graphical desktop. Installing dependencies downloads platform-specific packages; native dependencies may require your OS's build tools.
 
 ```bash
 git clone https://github.com/songzhuozhu/agent-baton.git
 cd agent-baton
+git checkout v0.1.1-preview.1
 npm ci
 npm run check
 npm run dev
 ```
+
+The checkout selects this documented preview; omit it to work on `main`.
 
 `npm run check` runs type checking, automated tests, and a production build. It does not launch the desktop or modify real agent installations.
 
@@ -132,7 +145,7 @@ Static risk indicators are not a security audit of third-party skills. Review th
 
 ## Current status
 
-The last local verification on **2026-09-12** passed **76 tests across 36 files**, type checking, and a production build.
+The last local verification on **2026-09-19** passed **121 tests across 37 files**, type checking, and a production build.
 
 Work remaining before V1 acceptance:
 

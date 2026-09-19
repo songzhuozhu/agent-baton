@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import type { Dirent } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { AgentKind } from '../../shared/domain';
@@ -16,11 +16,17 @@ export async function discoverUserSkillRoots(
   const uniqueRoots = [...new Set(roots)].sort();
 
   for (const root of uniqueRoots) {
-    if (!existsSync(root)) {
+    let entries: Dirent[];
+    try {
+      entries = await readdir(root, { withFileTypes: true });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        const detail = error instanceof Error ? `无法读取 Skill 根目录：${error.message}` : '无法读取 Skill 根目录。';
+        issues.push({ sourcePath: root, detail });
+      }
       continue;
     }
 
-    const entries = await readdir(root, { withFileTypes: true });
     for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
       if (!entry.isDirectory() && !entry.isSymbolicLink()) {
         continue;

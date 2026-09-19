@@ -130,6 +130,10 @@ export class AdoptionPreviewService {
 
     this.pending.delete(previewId);
     try {
+      const current = await inspectSkillDirectory(preview.sourceDirectory);
+      if (current.contentHash !== preview.contentHash) {
+        throw new AdoptionPreviewError('Skill 内容已变化，请重新预览并确认纳管。');
+      }
       return await this.skillControl.adoptSkill({
         sourceDirectory: preview.sourceDirectory,
         tags: input.tags,
